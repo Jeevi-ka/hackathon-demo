@@ -1,38 +1,73 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 function App() {
-  const [text, setText] = useState("");
-  const [result, setResult] = useState("");
+  const [name, setName] = useState("");
+  const [accounts, setAccounts] = useState([]);
+  const [amount, setAmount] = useState("");
+  const [type, setType] = useState("deposit");
 
-  const handleSubmit = async () => {
-    const response = await fetch("http://localhost:8080/api/process", {
+  const createAccount = async () => {
+    await fetch("http://localhost:8080/api/account", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ text: text })
+      body: JSON.stringify({ name })
     });
-
-    const data = await response.json();
-    setResult(data.result);
+    setName("");
+    fetchAccounts();
   };
+
+  const transact = async (id) => {
+    await fetch(
+      `http://localhost:8080/api/transaction/${id}?amount=${amount}&type=${type}`,
+      { method: "POST" }
+    );
+    fetchAccounts();
+  };
+
+  const fetchAccounts = async () => {
+    const res = await fetch("http://localhost:8080/api/account");
+    const data = await res.json();
+    setAccounts(data);
+  };
+
+  useEffect(() => {
+    fetchAccounts();
+  }, []);
 
   return (
     <div style={{ padding: "20px" }}>
-      <h2>Text Processor</h2>
+      <h2>Bank App</h2>
 
       <input
-        type="text"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Enter text"
+        placeholder="Account Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
       />
+      <button onClick={createAccount}>Create Account</button>
 
-      <br /><br />
+      <h3>Accounts</h3>
 
-      <button onClick={handleSubmit}>Send</button>
+      {accounts.map((acc) => (
+        <div key={acc.id}>
+          <p>
+            {acc.name} - Balance: ₹{acc.balance}
+          </p>
 
-      <h3>{result}</h3>
+          <input
+            placeholder="Amount"
+            onChange={(e) => setAmount(e.target.value)}
+          />
+
+          <select onChange={(e) => setType(e.target.value)}>
+            <option value="deposit">Deposit</option>
+            <option value="withdraw">Withdraw</option>
+          </select>
+
+          <button onClick={() => transact(acc.id)}>Submit</button>
+        </div>
+      ))}
     </div>
   );
 }
